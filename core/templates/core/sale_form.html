@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% block title %}New Sale{% endblock %}
+{% block content %}
+<h3>New Sale</h3>
+<form method="post" class="card p-3">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-md-4"><label class="form-label">Date</label>{{ form.date }}</div>
+    <div class="col-md-4"><label class="form-label">Buyer / Industry</label>{{ form.buyer }}</div>
+    <div class="col-md-4"><label class="form-label">Unit</label>{{ form.unit }}</div>
+    <div class="col-md-4"><label class="form-label">Quantity</label>{{ form.quantity }}</div>
+    <div class="col-md-4"><label class="form-label">Price per unit</label>{{ form.price_per_unit }}</div>
+    <div class="col-12"><label class="form-label">Notes</label>{{ form.notes }}</div>
+  </div>
+  <button class="btn btn-primary mt-3">Save Sale</button>
+</form>
+{% endblock %}

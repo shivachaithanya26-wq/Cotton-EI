@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% block title %}New Expense{% endblock %}
+{% block content %}
+<h3>New Expense</h3>
+<form method="post" class="card p-3">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-md-4"><label class="form-label">Date</label>{{ form.date }}</div>
+    <div class="col-md-4"><label class="form-label">Category</label>{{ form.category }}</div>
+    <div class="col-md-4"><label class="form-label">Amount</label>{{ form.amount }}</div>
+    <div class="col-md-8"><label class="form-label">Description</label>{{ form.description }}</div>
+    <div class="col-md-4"><label class="form-label">Linked purchase (optional)</label>{{ form.related_purchase }}</div>
+  </div>
+  <button class="btn btn-outline-secondary mt-3">Save Expense</button>
+</form>
+{% endblock %}

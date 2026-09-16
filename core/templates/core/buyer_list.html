@@ -1,0 +1,27 @@
+{% extends "core/base.html" %}
+{% block title %}Buyers{% endblock %}
+{% block content %}
+<h3>Buyers (Industries)</h3>
+<div class="row">
+  <div class="col-md-5">
+    <form method="post" class="card p-3">
+      {% csrf_token %}
+      <div class="mb-2"><label class="form-label">Name</label>{{ form.name }}</div>
+      <div class="mb-2"><label class="form-label">Industry Name</label>{{ form.industry_name }}</div>
+      <div class="mb-2"><label class="form-label">Phone</label>{{ form.phone }}</div>
+      <div class="mb-2"><label class="form-label">Address</label>{{ form.address }}</div>
+      <button class="btn btn-success">Add Buyer</button>
+    </form>
+  </div>
+  <div class="col-md-7">
+    <table class="table table-sm">
+      <thead><tr><th>Name</th><th>Industry</th><th>Phone</th></tr></thead>
+      <tbody>
+      {% for b in buyers %}
+        <tr><td>{{ b.name }}</td><td>{{ b.industry_name }}</td><td>{{ b.phone }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

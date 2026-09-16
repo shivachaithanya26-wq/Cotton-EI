@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Expenses{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between">
+  <h3>Extra Costs / Expenses</h3>
+  <a class="btn btn-outline-secondary" href="{% url 'core:expense_create' %}">+ New Expense</a>
+</div>
+<table class="table table-striped mt-3">
+  <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Linked Purchase</th></tr></thead>
+  <tbody>
+  {% for e in expenses %}
+    <tr>
+      <td>{{ e.date }}</td><td>{{ e.get_category_display }}</td>
+      <td>{{ e.description }}</td><td>Rs.{{ e.amount }}</td>
+      <td>{% if e.related_purchase %}<a href="{% url 'core:purchase_detail' e.related_purchase.pk %}">#{{ e.related_purchase.pk }}</a>{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">No expenses recorded yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

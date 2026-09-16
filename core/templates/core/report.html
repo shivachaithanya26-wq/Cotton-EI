@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h3>{{ title }}</h3>
+
+{% if mode == "daily" %}
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto"><input type="date" name="date" value="{{ day|date:'Y-m-d' }}" class="form-control"></div>
+  <div class="col-auto"><button class="btn btn-secondary">Go</button></div>
+</form>
+{% elif mode == "monthly" %}
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto"><input type="number" name="year" value="{{ year }}" class="form-control" style="width:100px;"></div>
+  <div class="col-auto"><input type="number" name="month" value="{{ month }}" min="1" max="12" class="form-control" style="width:80px;"></div>
+  <div class="col-auto"><button class="btn btn-secondary">Go</button></div>
+</form>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Purchases (net payable)</small><h4>Rs.{{ report.total_purchase_cost }}</h4><small>{{ report.total_purchase_bags }} bags, {{ report.total_purchase_net_weight_kg }} kg</small></div></div>
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Sales</small><h4>Rs.{{ report.total_sales }}</h4><small>{{ report.total_sale_quantity }} units sold</small></div></div>
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Expenses</small><h4>Rs.{{ report.total_expenses }}</h4></div></div>
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Profit</small>
+    <h4 class="{% if report.profit >= 0 %}text-success{% else %}text-danger{% endif %}">Rs.{{ report.profit }}</h4>
+  </div></div>
+</div>
+
+<div class="card p-3 mt-3">
+  <h5>Expenses by category</h5>
+  <table class="table table-sm">
+    <thead><tr><th>Category</th><th>Total</th></tr></thead>
+    <tbody>
+    {% for row in report.expense_by_category %}
+      <tr><td>{{ row.category }}</td><td>Rs.{{ row.total }}</td></tr>
+    {% empty %}
+      <tr><td colspan="2">No expenses in this period.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

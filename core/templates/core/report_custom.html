@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+{% block title %}Custom Report{% endblock %}
+{% block content %}
+<h3>Custom Date Range Report</h3>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto">{{ form.date_from }}</div>
+  <div class="col-auto">{{ form.date_to }}</div>
+  <div class="col-auto"><button class="btn btn-secondary">Generate</button></div>
+</form>
+
+{% if report %}
+<div class="row g-3">
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Purchases (net payable)</small><h4>Rs.{{ report.total_purchase_cost }}</h4></div></div>
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Sales</small><h4>Rs.{{ report.total_sales }}</h4></div></div>
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Expenses</small><h4>Rs.{{ report.total_expenses }}</h4></div></div>
+  <div class="col-md-3"><div class="card p-3"><small class="text-muted">Profit</small>
+    <h4 class="{% if report.profit >= 0 %}text-success{% else %}text-danger{% endif %}">Rs.{{ report.profit }}</h4>
+  </div></div>
+</div>
+{% endif %}
+{% endblock %}

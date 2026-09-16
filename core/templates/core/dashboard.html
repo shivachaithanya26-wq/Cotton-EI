@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Dashboard — {{ today }}</h3>
+  <div>
+    <a href="{% url 'core:purchase_create' %}" class="btn btn-success">+ New Purchase</a>
+    <a href="{% url 'core:sale_create' %}" class="btn btn-primary">+ New Sale</a>
+    <a href="{% url 'core:expense_create' %}" class="btn btn-outline-secondary">+ Expense</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <small class="text-muted">Today's Cotton Price</small>
+      <h4>
+        {% if today_price %}Rs.{{ today_price.price_per_quintal }} / qtl
+          <span class="badge bg-secondary">{{ today_price.get_source_display }}</span>
+        {% else %}<span class="text-danger">Not set</span>{% endif %}
+      </h4>
+      <a href="{% url 'core:set_today_price' %}" class="small">Update price →</a>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <small class="text-muted">Today's Purchases ({{ today_purchase_count }})</small>
+      <h4>Rs.{{ today_purchase_total }}</h4>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <small class="text-muted">Today's Sales ({{ today_sale_count }})</small>
+      <h4>Rs.{{ today_sale_total }}</h4>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <small class="text-muted">Today's Extra Costs</small>
+      <h4>Rs.{{ today_expense_total }}</h4>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3">
+  <h5>Month to date ({{ month_report.date_from }} → {{ month_report.date_to }})</h5>
+  <div class="row text-center">
+    <div class="col"><small class="text-muted">Purchases (net payable)</small><h5>Rs.{{ month_report.total_purchase_cost }}</h5></div>
+    <div class="col"><small class="text-muted">Sales</small><h5>Rs.{{ month_report.total_sales }}</h5></div>
+    <div class="col"><small class="text-muted">Expenses</small><h5>Rs.{{ month_report.total_expenses }}</h5></div>
+    <div class="col"><small class="text-muted">Profit</small>
+      <h5 class="{% if month_report.profit >= 0 %}text-success{% else %}text-danger{% endif %}">Rs.{{ month_report.profit }}</h5>
+    </div>
+  </div>
+</div>
+{% endblock %}

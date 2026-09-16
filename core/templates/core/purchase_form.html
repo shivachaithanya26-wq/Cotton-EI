@@ -1,0 +1,122 @@
+{% extends "core/base.html" %}
+{% block title %}New Purchase{% endblock %}
+{% block content %}
+<h3>New Purchase</h3>
+<form method="post">
+  {% csrf_token %}
+  <div class="card p-3 mb-3">
+    <h5>Transaction details</h5>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Date</label>
+        {{ form.date }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Client</label>
+        {{ form.client }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Unit for pricing</label>
+        {{ form.unit }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Today's Live Price</label>
+        {{ form.live_price }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">OR Manual price / quintal</label>
+        {{ form.manual_price_per_quintal }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Cash-cutting rule</label>
+        {{ form.cash_cutting_rule }}
+        <div class="form-text">Leave blank to use the active default rule.</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Tare (per-bag deduction) rule</label>
+        {{ form.tare_rule }}
+        <div class="form-text">Leave blank to use the active default rule.</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">OR custom cash-cutting %</label>
+        {{ form.custom_cash_cutting_rate_percent }}
+        <div class="form-text">Overrides the rule above for this purchase only.</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">OR custom tare (kg/bag)</label>
+        {{ form.custom_tare_per_bag_kg }}
+        <div class="form-text">Overrides the rule above for this purchase only.</div>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Notes</label>
+        {{ form.notes }}
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-3 mb-3">
+    <h5>Or add a new client</h5>
+    <p class="form-text mt-0">Leave the Client dropdown above blank and fill this in instead.</p>
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">New client name</label>
+        {{ form.new_client_name }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">New client phone</label>
+        {{ form.new_client_phone }}
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-3 mb-3">
+    <h5>Bags — enter weight one bag at a time</h5>
+    {{ formset.management_form }}
+    <table class="table" id="bag-table">
+      <thead><tr><th>Bag #</th><th>Weight (kg)</th><th></th></tr></thead>
+      <tbody>
+      {% for bag_form in formset %}
+        <tr>
+          <td>{{ bag_form.bag_number }}</td>
+          <td>{{ bag_form.weight_kg }}</td>
+          <td>{% if bag_form.DELETE %}{{ bag_form.DELETE }} Remove{% endif %}
+              {{ bag_form.id }}{{ bag_form.errors }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" id="add-bag-row" class="btn btn-sm btn-outline-secondary">+ Add another bag</button>
+  </div>
+
+  <button class="btn btn-success">Save Purchase</button>
+</form>
+
+<script>
+document.getElementById('add-bag-row').addEventListener('click', function () {
+  const totalForms = document.getElementById('id_bags-TOTAL_FORMS');
+  const idx = parseInt(totalForms.value, 10);
+  const table = document.getElementById('bag-table').querySelector('tbody');
+  const lastRow = table.querySelector('tr');
+  const newRow = lastRow.cloneNode(true);
+
+  newRow.querySelectorAll('input').forEach(function (input) {
+    const newName = input.name.replace(/bags-\d+-/, 'bags-' + idx + '-');
+    const newId = 'id_' + newName;
+    input.name = newName;
+    input.id = newId;
+    if (input.type === 'checkbox') {
+      input.checked = false;
+    } else if (input.name.endsWith('-bag_number')) {
+      input.value = idx + 1;
+    } else {
+      input.value = '';
+    }
+  });
+  table.appendChild(newRow);
+  totalForms.value = idx + 1;
+});
+</script>
+{% endblock %}

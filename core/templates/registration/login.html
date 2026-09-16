@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Login - Cotton Business{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-4">
+    <h3 class="mb-3">🌾 Cotton Business Login</h3>
+    <form method="post" class="card p-4 shadow-sm">
+      {% csrf_token %}
+      {% if form.errors %}<div class="alert alert-danger">Invalid username or password.</div>{% endif %}
+      <div class="mb-3">
+        <label class="form-label">Username</label>
+        {{ form.username }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        {{ form.password }}
+      </div>
+      <button class="btn btn-primary" type="submit">Login</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

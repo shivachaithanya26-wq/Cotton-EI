@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Sales{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between">
+  <h3>Sales</h3>
+  <a class="btn btn-primary" href="{% url 'core:sale_create' %}">+ New Sale</a>
+</div>
+<table class="table table-striped mt-3">
+  <thead><tr><th>#</th><th>Date</th><th>Buyer</th><th>Qty</th><th>Unit</th><th>Price/Unit</th><th>Amount</th></tr></thead>
+  <tbody>
+  {% for s in sales %}
+    <tr>
+      <td>#{{ s.pk }}</td><td>{{ s.date }}</td><td>{{ s.buyer }}</td>
+      <td>{{ s.quantity }}</td><td>{{ s.get_unit_display }}</td>
+      <td>Rs.{{ s.price_per_unit }}</td><td><strong>Rs.{{ s.amount }}</strong></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7">No sales yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

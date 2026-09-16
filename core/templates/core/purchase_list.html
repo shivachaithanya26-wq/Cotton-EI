@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}Purchases{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between">
+  <h3>Purchases</h3>
+  <a class="btn btn-success" href="{% url 'core:purchase_create' %}">+ New Purchase</a>
+</div>
+<table class="table table-striped mt-3">
+  <thead><tr>
+    <th>#</th><th>Date</th><th>Client</th><th>Bags</th><th>Net Wt (kg)</th>
+    <th>Price/Qtl</th><th>Gross</th><th>Cash Cutting</th><th>Net Payable</th>
+  </tr></thead>
+  <tbody>
+  {% for p in purchases %}
+    <tr>
+      <td><a href="{% url 'core:purchase_detail' p.pk %}">#{{ p.pk }}</a></td>
+      <td>{{ p.date }}</td>
+      <td>{{ p.client }}</td>
+      <td>{{ p.num_bags }}</td>
+      <td>{{ p.net_weight_kg }}</td>
+      <td>Rs.{{ p.price_used_per_quintal }}</td>
+      <td>Rs.{{ p.gross_amount }}</td>
+      <td>Rs.{{ p.cash_cutting_amount }}</td>
+      <td><strong>Rs.{{ p.net_payable }}</strong></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="9">No purchases yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
