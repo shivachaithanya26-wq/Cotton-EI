@@ -14,6 +14,7 @@ from .forms import (
     DateRangeForm,
     ExpenseForm,
     PurchaseBagFormSet,
+    PurchaseExpenseFormSet,
     PurchaseForm,
     SaleForm,
     TodayPriceForm,
@@ -83,7 +84,8 @@ def purchase_create(request):
     if request.method == "POST":
         form = PurchaseForm(request.POST)
         formset = PurchaseBagFormSet(request.POST, instance=Purchase())
-        if form.is_valid() and formset.is_valid():
+        expense_formset = PurchaseExpenseFormSet(request.POST, instance=Purchase())
+        if form.is_valid() and formset.is_valid() and expense_formset.is_valid():
             with transaction.atomic():
                 purchase = form.save(commit=False)
                 if not purchase.client_id:
@@ -94,6 +96,11 @@ def purchase_create(request):
                 purchase.save()
                 formset.instance = purchase
                 formset.save()
+                expense_formset.instance = purchase
+                for expense in expense_formset.save(commit=False):
+                    expense.related_purchase = purchase
+                    expense.date = purchase.date
+                    expense.save()
                 purchase.recalculate()
             messages.success(request, f"Purchase #{purchase.pk} saved. Net payable: Rs.{purchase.net_payable}")
             return redirect("core:purchase_detail", pk=purchase.pk)
@@ -102,7 +109,11 @@ def purchase_create(request):
         initial = {"live_price": today_price.pk} if today_price else {}
         form = PurchaseForm(initial=initial)
         formset = PurchaseBagFormSet(instance=Purchase())
-    return render(request, "core/purchase_form.html", {"form": form, "formset": formset})
+        expense_formset = PurchaseExpenseFormSet(instance=Purchase())
+    return render(
+        request,
+        "core/purchase_form.html",
+        {"form": form, "formset": formset, "expense_formset": expense_formset},)
 
 @login_required
 def purchase_detail(request, pk):

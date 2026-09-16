@@ -91,32 +91,66 @@
     <button type="button" id="add-bag-row" class="btn btn-sm btn-outline-secondary">+ Add another bag</button>
   </div>
 
+  <div class="card p-3 mb-3">
+    <h5>Extra costs for this purchase (optional)</h5>
+    <p class="form-text mt-0">Labour, transport, loading, extra cash given, etc. — dated the same as
+      this purchase, saved as Expenses linked to it, and included in the expense list and profit reports.</p>
+    {{ expense_formset.management_form }}
+    {% if expense_formset.non_form_errors %}
+      <div class="alert alert-danger py-2">{{ expense_formset.non_form_errors }}</div>
+    {% endif %}
+    <table class="table" id="expense-table">
+      <thead><tr><th>Category</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+      <tbody>
+      {% for expense_form in expense_formset %}
+        <tr>
+          <td>{{ expense_form.category }}</td>
+          <td>{{ expense_form.description }}</td>
+          <td>{{ expense_form.amount }}</td>
+          <td>{% if expense_form.DELETE %}{{ expense_form.DELETE }} Remove{% endif %}
+              {{ expense_form.id }}{{ expense_form.errors }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" id="add-expense-row" class="btn btn-sm btn-outline-secondary">+ Add another cost</button>
+  </div>
+
   <button class="btn btn-success">Save Purchase</button>
 </form>
 
 <script>
-document.getElementById('add-bag-row').addEventListener('click', function () {
-  const totalForms = document.getElementById('id_bags-TOTAL_FORMS');
-  const idx = parseInt(totalForms.value, 10);
-  const table = document.getElementById('bag-table').querySelector('tbody');
-  const lastRow = table.querySelector('tr');
-  const newRow = lastRow.cloneNode(true);
+function addFormsetRow(prefix, tableId, buttonId, opts) {
+  opts = opts || {};
+  document.getElementById(buttonId).addEventListener('click', function () {
+    const totalForms = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
+    const idx = parseInt(totalForms.value, 10);
+    const table = document.getElementById(tableId).querySelector('tbody');
+    const lastRow = table.querySelector('tr');
+    const newRow = lastRow.cloneNode(true);
+    const fieldRegex = new RegExp(prefix + '-\\d+-');
 
-  newRow.querySelectorAll('input').forEach(function (input) {
-    const newName = input.name.replace(/bags-\d+-/, 'bags-' + idx + '-');
-    const newId = 'id_' + newName;
-    input.name = newName;
-    input.id = newId;
-    if (input.type === 'checkbox') {
-      input.checked = false;
-    } else if (input.name.endsWith('-bag_number')) {
-      input.value = idx + 1;
-    } else {
-      input.value = '';
-    }
+    newRow.querySelectorAll('input, select').forEach(function (field) {
+      const newName = field.name.replace(fieldRegex, prefix + '-' + idx + '-');
+      const newId = 'id_' + newName;
+      field.name = newName;
+      field.id = newId;
+      if (field.type === 'checkbox') {
+        field.checked = false;
+      } else if (opts.autoNumberField && field.name.endsWith(opts.autoNumberField)) {
+        field.value = idx + 1;
+      } else if (field.tagName === 'SELECT') {
+        field.selectedIndex = 0;
+      } else {
+        field.value = '';
+      }
+    });
+    table.appendChild(newRow);
+    totalForms.value = idx + 1;
   });
-  table.appendChild(newRow);
-  totalForms.value = idx + 1;
-});
+}
+
+addFormsetRow('bags', 'bag-table', 'add-bag-row', {autoNumberField: '-bag_number'});
+addFormsetRow('extra_costs', 'expense-table', 'add-expense-row');
 </script>
 {% endblock %}

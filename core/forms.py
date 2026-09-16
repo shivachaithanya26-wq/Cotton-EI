@@ -102,6 +102,16 @@ PurchaseBagFormSet = inlineformset_factory(
     can_delete=True,
 )
 
+class PurchaseExpenseForm(forms.ModelForm):
+     class Meta:
+         model = Expense
+         fields = ['category', 'description', 'amount'] 
+         widgets = { 
+            'category': forms.Select(attrs={'class': 'form-select'}), 
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional'}),
+            'amount': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'min': 0}), 
+            } 
+PurchaseExpenseFormSet = inlineformset_factory( Purchase, Expense, form=PurchaseExpenseForm, fk_name='related_purchase', extra=2, can_delete=True, )
 
 class SaleForm(forms.ModelForm):
     class Meta:
