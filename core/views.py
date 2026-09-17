@@ -18,8 +18,9 @@ from .forms import (
     PurchaseForm,
     SaleForm,
     TodayPriceForm,
+    InvestmentForm,
 )
-from .models import Buyer, Client, Expense, LivePrice, Purchase, Sale
+from .models import Buyer, Client, Expense, LivePrice, Purchase, Sale, Investment
 
 
 @login_required
@@ -42,6 +43,7 @@ def dashboard(request):
         "today_sale_count": sale_qs.count(),
         "today_expense_total": today_expenses,
         "month_report": month_report,
+        "investment_balance": services.investment_balance(),
     }
     return render(request, "core/dashboard.html", context)
 
@@ -110,10 +112,12 @@ def purchase_create(request):
         form = PurchaseForm(initial=initial)
         formset = PurchaseBagFormSet(instance=Purchase())
         expense_formset = PurchaseExpenseFormSet(instance=Purchase())
+
     return render(
         request,
         "core/purchase_form.html",
-        {"form": form, "formset": formset, "expense_formset": expense_formset},)
+        {"form": form, "formset": formset, "expense_formset": expense_formset},
+        )
 
 @login_required
 def purchase_detail(request, pk):
@@ -241,3 +245,30 @@ def buyer_list(request):
     else:
         form = BuyerForm()
     return render(request, "core/buyer_list.html", {"form": form, "buyers": Buyer.objects.all()})
+
+#-------------------------------------------------
+#Daily Investment
+#--------------------------------------------------
+
+@login_required
+def investment_add(request):
+    if request.method == "POST":
+        form = InvestmentForm(request.POST)
+        if form.is_valid():
+            investment = form.save(commit=False)
+            investment.date = timezone.localdate()
+            investment.save()
+            messages.success(
+                request,
+                f"Investment of Rs.{investment.amount} added. "
+                f"Remaining balance: Rs.{services.investment_balance()}",
+            )
+            return redirect("core:dashboard")
+    else:
+        form = InvestmentForm()
+    context = {
+        "form": form,
+        "recent_investments": Investment.objects.all()[:15],
+        "balance": services.investment_balance(),
+    }
+    return render(request, "core/investment_form.html", context)

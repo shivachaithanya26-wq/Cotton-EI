@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block title %}Add Investment{% endblock %}
+{% block content %}
+<h3>Add Investment</h3>
+<div class="row">
+  <div class="col-md-5">
+    <div class="card p-3 mb-3 card-metric">
+      <small class="text-muted">Current balance (before this entry)</small>
+      <h4 class="{% if balance >= 0 %}text-success{% else %}text-danger{% endif %}">Rs.{{ balance }}</h4>
+    </div>
+    <form method="post" class="card p-3">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Amount (Rs.)</label>
+        {{ form.amount }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Notes</label>
+        {{ form.notes }}
+      </div>
+      <button class="btn btn-success">Add Investment</button>
+    </form>
+  </div>
+  <div class="col-md-7">
+    <h5>Recent investments</h5>
+    <table class="table table-sm">
+      <thead><tr><th>Date</th><th>Amount</th><th>Notes</th></tr></thead>
+      <tbody>
+      {% for inv in recent_investments %}
+        <tr><td>{{ inv.date }}</td><td>Rs.{{ inv.amount }}</td><td>{{ inv.notes }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3">No investments recorded yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

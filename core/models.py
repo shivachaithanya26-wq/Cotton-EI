@@ -242,3 +242,13 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"{self.get_category_display()} - Rs.{self.amount} ({self.date})"
+
+class Investment(models.Model): 
+    date = models.DateField(default=timezone.now) 
+    amount = models.DecimalField(max_digits=12, decimal_places=2) 
+    notes = models.CharField(max_length=255, blank=True) 
+    created_at = models.DateTimeField(auto_now_add=True) 
+    class Meta: 
+        ordering = ['-created_at'] 
+    def __str__(self): 
+        return f'{self.date} - Rs.{self.amount}'

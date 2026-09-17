@@ -7,7 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db.models import Sum
 from django.utils import timezone
 
-from .models import CashCuttingRule, Expense, LivePrice, Purchase, Sale, TareRule
+from .models import CashCuttingRule, Expense, LivePrice, Purchase, Sale, TareRule, Investment
 
 TWO_PLACES = Decimal("0.01")
 
@@ -208,3 +208,15 @@ def profit_report(date_from, date_to):
         "expense_by_category": expense_by_category,
         "profit": profit,
     }
+
+
+#--------------------------------------------------------------
+#Daily Investments 
+#--------------------------------------------------------------
+
+def investment_balance(): 
+    total_invested = Investment.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0.00') 
+    total_purchases = Purchase.objects.aggregate(total=Sum('net_payable'))['total'] or Decimal('0.00') 
+    total_expenses = Expense.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0.00') 
+
+    return total_invested - total_purchases - total_expenses

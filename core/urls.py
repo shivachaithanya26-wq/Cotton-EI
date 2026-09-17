@@ -24,4 +24,6 @@ urlpatterns = [
 
     path("clients/", views.client_list, name="client_list"),
     path("buyers/", views.buyer_list, name="buyer_list"),
+
+    path('investments/new/', views.investment_add, name='investment_add'),
 ]

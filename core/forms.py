@@ -1,7 +1,7 @@
 from django import forms
 from django.forms import inlineformset_factory
 
-from .models import Buyer, Client, Expense, LivePrice, Purchase, PurchaseBag, Sale
+from .models import Buyer, Client, Expense, LivePrice, Purchase, PurchaseBag, Sale, Investment
 
 
 class DateRangeForm(forms.Form):
@@ -161,3 +161,13 @@ class BuyerForm(forms.ModelForm):
             "phone": forms.TextInput(attrs={"class": "form-control"}),
             "address": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
         }
+
+
+class InvestmentForm(forms.ModelForm): 
+    class Meta: 
+        model = Investment 
+        fields = ['amount', 'notes'] 
+        widgets = { 
+            'amount': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'autofocus': True}), 
+            'notes': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional'}), 
+            } 

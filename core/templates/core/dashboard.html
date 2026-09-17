@@ -4,10 +4,19 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Dashboard — {{ today }}</h3>
   <div>
+    <a href="{% url 'core:investment_add' %}" class="btn btn-warning">+ Add Investment</a>
     <a href="{% url 'core:purchase_create' %}" class="btn btn-success">+ New Purchase</a>
     <a href="{% url 'core:sale_create' %}" class="btn btn-primary">+ New Sale</a>
     <a href="{% url 'core:expense_create' %}" class="btn btn-outline-secondary">+ Expense</a>
   </div>
+</div>
+
+<div class="card p-3 mb-4 card-metric">
+  <small class="text-muted">Investment balance remaining</small>
+  <h3 class="{% if investment_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+    Rs.{{ investment_balance }}
+  </h3>
+  <a href="{% url 'core:investment_add' %}" class="small">Add investment →</a>
 </div>
 
 <div class="row g-3 mb-4">
