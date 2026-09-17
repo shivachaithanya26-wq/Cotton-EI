@@ -8,11 +8,22 @@
     <div class="card p-3 mb-3">
       <h5>Bags</h5>
       <table class="table table-sm">
-        <thead><tr><th>Bag #</th><th>Weight (kg)</th></tr></thead>
+        <thead><tr><th>Bag #</th><th>Weight (kg)</th><th>Quality</th></tr></thead>
         <tbody>
         {% for bag in purchase.bags.all %}
-          <tr><td>{{ bag.bag_number }}</td><td>{{ bag.weight_kg }}</td></tr>
+          <tr><td>{{ bag.bag_number }}</td><td>{{ bag.weight_kg }}</td><td>{{ bag.get_grade_display }}</td></tr>
         {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card p-3">
+      <h5>By quality</h5>
+      <table class="table table-sm">
+        <thead><tr><th>Type</th><th>Net weight</th><th>Amount</th></tr></thead>
+        <tbody>
+          <tr><td>Type A</td><td>{{ purchase.net_weight_type_a_kg }} kg</td><td>Rs.{{ purchase.gross_amount_type_a }}</td></tr>
+          <tr><td>Type B</td><td>{{ purchase.net_weight_type_b_kg }} kg</td><td>Rs.{{ purchase.gross_amount_type_b }}</td></tr>
+          <tr><td>Type C</td><td>{{ purchase.net_weight_type_c_kg }} kg</td><td>Rs.{{ purchase.gross_amount_type_c }}</td></tr>
         </tbody>
       </table>
     </div>

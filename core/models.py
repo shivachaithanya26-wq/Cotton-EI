@@ -9,6 +9,12 @@ UNIT_CHOICES = [
     ("QTL", "Quintal (100 kg)"),
 ]
 
+GRADE_CHOICES = [
+    ("A", "Type A - Best"),
+    ("B", "Type B - Average"),
+    ("C", "Type C - Poor"),
+]
+
 
 class Client(models.Model):
     """A farmer / seller we buy cotton from."""
@@ -136,7 +142,20 @@ class Purchase(models.Model):
     )
     manual_price_per_quintal = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text="Used only if no live price is selected above.",
+        help_text="Used only if no live price is selected above. This is the Type A price.",
+    )
+
+    # ---- prices for the other two cotton qualities in this purchase ----
+    # Type A uses live_price / manual_price_per_quintal above (the existing
+    # daily price). Only required if this purchase actually has bags of
+    # that grade — validated in the view.
+    price_type_b_per_quintal = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Price per quintal for Type B (average) bags in this purchase.",
+    )
+    price_type_c_per_quintal = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Price per quintal for Type C (poor) bags in this purchase.",
     )
 
     # cash_cutting_rule = models.ForeignKey(CashCuttingRule, on_delete=models.PROTECT, null=True, blank=True)
@@ -157,6 +176,19 @@ class Purchase(models.Model):
     gross_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
     cash_cutting_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
     net_payable = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
+
+    # ---- per-grade breakdown (set by services.calculate_purchase) ----
+    # Multiple cotton qualities can be in one purchase; tare and cash-cutting
+    # are the same for every quality (deducted at the bag/whole-purchase
+    # level), but each quality has its own weight and price, so its own
+    # gross amount. These three pairs let purchase_detail.html show the
+    # breakdown, and let reports total quantity per grade.
+    net_weight_type_a_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0, editable=False)
+    net_weight_type_b_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0, editable=False)
+    net_weight_type_c_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0, editable=False)
+    gross_amount_type_a = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
+    gross_amount_type_b = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
+    gross_amount_type_c = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
 
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -184,13 +216,14 @@ class PurchaseBag(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name="bags")
     bag_number = models.PositiveIntegerField()
     weight_kg = models.DecimalField(max_digits=8, decimal_places=3)
+    grade = models.CharField(max_length=1, choices=GRADE_CHOICES, default="A")
 
     class Meta:
         ordering = ["bag_number"]
         unique_together = ("purchase", "bag_number")
 
     def __str__(self):
-        return f"Bag {self.bag_number} - {self.weight_kg} kg"
+        return f"Bag {self.bag_number} - {self.weight_kg} kg ({self.get_grade_display()})"
 
 
 class Sale(models.Model):

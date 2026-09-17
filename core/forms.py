@@ -44,6 +44,8 @@ class PurchaseForm(forms.ModelForm):
             "tare_rule",
             "custom_cash_cutting_rate_percent",
             "custom_tare_per_bag_kg",
+            "price_type_b_per_quintal",
+            "price_type_c_per_quintal",
             "notes",
         ]
         widgets = {
@@ -59,6 +61,12 @@ class PurchaseForm(forms.ModelForm):
             ),
             "custom_tare_per_bag_kg": forms.NumberInput(
                 attrs={"step": "0.001", "class": "form-control", "placeholder": "e.g. 0.500"}
+            ),
+            "price_type_b_per_quintal": forms.NumberInput(
+                attrs={"step": "0.01", "class": "form-control", "placeholder": "Rs./quintal"}
+            ),
+            "price_type_c_per_quintal": forms.NumberInput(
+                attrs={"step": "0.01", "class": "form-control", "placeholder": "Rs./quintal"}
             ),
             "notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
         }
@@ -84,10 +92,11 @@ class PurchaseForm(forms.ModelForm):
 class PurchaseBagForm(forms.ModelForm):
     class Meta:
         model = PurchaseBag
-        fields = ["bag_number", "weight_kg"]
+        fields = ["bag_number", "weight_kg", "grade"]
         widgets = {
             "bag_number": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001", "min": 0}),
+            "grade": forms.Select(attrs={"class": "form-select"}),
         }
 
 
