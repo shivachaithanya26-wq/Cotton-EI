@@ -17,5 +17,17 @@
     <h4 class="{% if report.profit >= 0 %}text-success{% else %}text-danger{% endif %}">Rs.{{ report.profit }}</h4>
   </div></div>
 </div>
+
+<div class="card p-3 mt-3">
+  <h5>Cotton purchased by quality</h5>
+  <table class="table table-sm">
+    <thead><tr><th>Type</th><th>Total weight</th><th>Bags</th></tr></thead>
+    <tbody>
+    {% for row in report.grade_totals %}
+      <tr><td>{{ row.label }}</td><td>{{ row.total_weight_kg }} kg</td><td>{{ row.total_bags }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 {% endblock %}

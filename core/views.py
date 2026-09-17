@@ -88,36 +88,56 @@ def purchase_create(request):
         formset = PurchaseBagFormSet(request.POST, instance=Purchase())
         expense_formset = PurchaseExpenseFormSet(request.POST, instance=Purchase())
         if form.is_valid() and formset.is_valid() and expense_formset.is_valid():
-            with transaction.atomic():
-                purchase = form.save(commit=False)
-                if not purchase.client_id:
-                    purchase.client = Client.objects.create(
-                        name=form.cleaned_data["new_client_name"].strip(),
-                        phone=form.cleaned_data.get("new_client_phone", "").strip(),
-                    )
-                purchase.save()
-                formset.instance = purchase
-                formset.save()
-                expense_formset.instance = purchase
-                for expense in expense_formset.save(commit=False):
-                    expense.related_purchase = purchase
-                    expense.date = purchase.date
-                    expense.save()
-                purchase.recalculate()
-            messages.success(request, f"Purchase #{purchase.pk} saved. Net payable: Rs.{purchase.net_payable}")
-            return redirect("core:purchase_detail", pk=purchase.pk)
+            # Which grades actually have bags in this submission? Only look
+            # at forms that weren't left blank / marked for deletion.
+            grades_present = {
+                f.cleaned_data.get("grade", "A")
+                for f in formset.forms
+                if f.cleaned_data and not f.cleaned_data.get("DELETE") and f.cleaned_data.get("weight_kg")
+            }
+            price_errors = []
+            if "A" in grades_present and not form.cleaned_data.get("live_price") and not form.cleaned_data.get(
+                "manual_price_per_quintal"
+            ):
+                price_errors.append("Enter today's Type A price (live price or manual) — you have Type A bags.")
+            if "B" in grades_present and form.cleaned_data.get("price_type_b_per_quintal") is None:
+                price_errors.append("Enter a Type B price — you have Type B bags in this purchase.")
+            if "C" in grades_present and form.cleaned_data.get("price_type_c_per_quintal") is None:
+                price_errors.append("Enter a Type C price — you have Type C bags in this purchase.")
+
+            if price_errors:
+                for error in price_errors:
+                    form.add_error(None, error)
+            else:
+                with transaction.atomic():
+                    purchase = form.save(commit=False)
+                    if not purchase.client_id:
+                        purchase.client = Client.objects.create(
+                            name=form.cleaned_data["new_client_name"].strip(),
+                            phone=form.cleaned_data.get("new_client_phone", "").strip(),
+                        )
+                    purchase.save()
+                    formset.instance = purchase
+                    formset.save()
+                    expense_formset.instance = purchase
+                    for expense in expense_formset.save(commit=False):
+                        expense.related_purchase = purchase
+                        expense.date = purchase.date
+                        expense.save()
+                    purchase.recalculate()
+                messages.success(request, f"Purchase #{purchase.pk} saved. Net payable: Rs.{purchase.net_payable}")
+                return redirect("core:purchase_detail", pk=purchase.pk)
     else:
         today_price = LivePrice.latest_for(timezone.localdate())
         initial = {"live_price": today_price.pk} if today_price else {}
         form = PurchaseForm(initial=initial)
         formset = PurchaseBagFormSet(instance=Purchase())
         expense_formset = PurchaseExpenseFormSet(instance=Purchase())
-
     return render(
         request,
         "core/purchase_form.html",
         {"form": form, "formset": formset, "expense_formset": expense_formset},
-        )
+    )
 
 @login_required
 def purchase_detail(request, pk):

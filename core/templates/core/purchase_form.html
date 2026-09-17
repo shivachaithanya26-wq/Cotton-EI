@@ -42,10 +42,20 @@
         {{ form.custom_cash_cutting_rate_percent }}
         <div class="form-text">Overrides the rule above for this purchase only.</div>
       </div>
-      <div class="col-md-4">
+            <div class="col-md-4">
         <label class="form-label">OR custom tare (kg/bag)</label>
         {{ form.custom_tare_per_bag_kg }}
         <div class="form-text">Overrides the rule above for this purchase only.</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Type B price / quintal</label>
+        {{ form.price_type_b_per_quintal }}
+        <div class="form-text">Required only if you have Type B bags below.</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Type C price / quintal</label>
+        {{ form.price_type_c_per_quintal }}
+        <div class="form-text">Required only if you have Type C bags below.</div>
       </div>
       <div class="col-12">
         <label class="form-label">Notes</label>
@@ -76,12 +86,13 @@
     <h5>Bags — enter weight one bag at a time</h5>
     {{ formset.management_form }}
     <table class="table" id="bag-table">
-      <thead><tr><th>Bag #</th><th>Weight (kg)</th><th></th></tr></thead>
+      <thead><tr><th>Bag #</th><th>Weight (kg)</th><th>Quality</th><th></th></tr></thead>
       <tbody>
       {% for bag_form in formset %}
         <tr>
           <td>{{ bag_form.bag_number }}</td>
           <td>{{ bag_form.weight_kg }}</td>
+          <td>{{ bag_form.grade }}</td>
           <td>{% if bag_form.DELETE %}{{ bag_form.DELETE }} Remove{% endif %}
               {{ bag_form.id }}{{ bag_form.errors }}</td>
         </tr>

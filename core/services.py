@@ -4,10 +4,10 @@ audit and change without touching views/templates.
 """
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from django.utils import timezone
 
-from .models import CashCuttingRule, Expense, LivePrice, Purchase, Sale, TareRule, Investment
+from .models import CashCuttingRule, Expense, LivePrice, Purchase, Sale, TareRule, Investment, GRADE_CHOICES, PurchaseBag
 
 TWO_PLACES = Decimal("0.01")
 
@@ -18,17 +18,23 @@ def to_quintal(weight_kg: Decimal) -> Decimal:
 
 def calculate_purchase(purchase: Purchase) -> Purchase:
     """
-    Implements requirement #9:
+    Implements requirement #9, extended for multiple cotton qualities in
+    one purchase (Type A / B / C):
 
-      1. Sum the individually-weighed bags -> gross weight, bag count.
-      2. Subtract a fixed tare per bag (e.g. 0.5 kg) -> net weight.
-      3. Convert net weight into the purchase's chosen unit (kg or quintal).
-      4. Multiply by the live (or manual) price -> gross amount.
-      5. Deduct a cash-cutting percentage (e.g. 5%) -> net amount payable
-         to the client.
+      1. Group the individually-weighed bags by grade.
+      2. Within each grade, sum weight -> gross weight, bag count.
+      3. Subtract the SAME per-bag tare from every bag regardless of grade
+         (tare is a physical bag-weight allowance, not quality-dependent)
+         -> net weight per grade.
+      4. Convert each grade's net weight into the purchase's chosen unit
+         and multiply by THAT grade's price -> gross amount per grade.
+      5. Sum all grades' gross amounts -> total gross amount.
+      6. Deduct ONE cash-cutting percentage from the total (also not
+         quality-dependent) -> net amount payable to the client.
 
     Worked example matching the spec: 3 quintal x Rs.7000 = Rs.21,000.
     5% cash cutting = Rs.1,050. Net payable = Rs.19,950.
+    (That example only used Type A bags, so it still matches exactly.)
     """
     bags = list(purchase.bags.all())
     gross_weight_kg = sum((Decimal(str(b.weight_kg)) for b in bags), Decimal("0"))
@@ -48,20 +54,43 @@ def calculate_purchase(purchase: Purchase) -> Purchase:
         net_weight_kg = Decimal("0")
 
     if purchase.live_price_id:
-        price_per_quintal = Decimal(str(purchase.live_price.price_per_quintal))
+        price_type_a = Decimal(str(purchase.live_price.price_per_quintal))
     elif purchase.manual_price_per_quintal:
-        price_per_quintal = Decimal(str(purchase.manual_price_per_quintal))
+        price_type_a = Decimal(str(purchase.manual_price_per_quintal))
     else:
-        price_per_quintal = Decimal("0")
+        price_type_a = Decimal("0")
+    price_by_grade = {
+        "A": price_type_a,
+        "B": Decimal(str(purchase.price_type_b_per_quintal)) if purchase.price_type_b_per_quintal else Decimal("0"),
+        "C": Decimal(str(purchase.price_type_c_per_quintal)) if purchase.price_type_c_per_quintal else Decimal("0"),
+    }
 
-    if purchase.unit == "QTL":
-        net_qty_in_unit = to_quintal(net_weight_kg)
-        price_per_unit = price_per_quintal
-    else:  # KG
-        net_qty_in_unit = net_weight_kg
-        price_per_unit = price_per_quintal / Decimal("100")
+    net_weight_by_grade = {"A": Decimal("0"), "B": Decimal("0"), "C": Decimal("0")}
+    gross_amount_by_grade = {"A": Decimal("0"), "B": Decimal("0"), "C": Decimal("0")}
+    gross_amount = Decimal("0")
 
-    gross_amount = (net_qty_in_unit * price_per_unit).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    for grade in ("A", "B", "C"):
+        grade_bags = [b for b in bags if b.grade == grade]
+        if not grade_bags:
+            continue
+        grade_gross_weight_kg = sum((Decimal(str(b.weight_kg)) for b in grade_bags), Decimal("0"))
+        grade_tare_kg = tare_per_bag * len(grade_bags)
+        grade_net_weight_kg = grade_gross_weight_kg - grade_tare_kg
+        if grade_net_weight_kg < 0:
+            grade_net_weight_kg = Decimal("0")
+
+        if purchase.unit == "QTL":
+            grade_qty_in_unit = to_quintal(grade_net_weight_kg)
+            price_per_unit = price_by_grade[grade]
+        else:  # KG
+            grade_qty_in_unit = grade_net_weight_kg
+            price_per_unit = price_by_grade[grade] / Decimal("100")
+
+        grade_gross_amount = (grade_qty_in_unit * price_per_unit).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+
+        net_weight_by_grade[grade] = grade_net_weight_kg
+        gross_amount_by_grade[grade] = grade_gross_amount
+        gross_amount += grade_gross_amount
 
     cutting_rule = purchase.cash_cutting_rule or CashCuttingRule.active_default()
     if purchase.custom_cash_cutting_rate_percent is not None:
@@ -79,10 +108,16 @@ def calculate_purchase(purchase: Purchase) -> Purchase:
     purchase.num_bags = num_bags
     purchase.tare_weight_kg = tare_weight_kg
     purchase.net_weight_kg = net_weight_kg
-    purchase.price_used_per_quintal = price_per_quintal
+    purchase.price_used_per_quintal = price_type_a
     purchase.gross_amount = gross_amount
     purchase.cash_cutting_amount = cash_cutting_amount
     purchase.net_payable = net_payable
+    purchase.net_weight_type_a_kg = net_weight_by_grade["A"]
+    purchase.net_weight_type_b_kg = net_weight_by_grade["B"]
+    purchase.net_weight_type_c_kg = net_weight_by_grade["C"]
+    purchase.gross_amount_type_a = gross_amount_by_grade["A"]
+    purchase.gross_amount_type_b = gross_amount_by_grade["B"]
+    purchase.gross_amount_type_c = gross_amount_by_grade["C"]
     if purchase.cash_cutting_rule_id is None:
         purchase.cash_cutting_rule = cutting_rule
     if purchase.tare_rule_id is None:
@@ -170,6 +205,29 @@ def purchase_totals(date_from, date_to):
     )
     return {k: (v or Decimal("0")) for k, v in agg.items()}, qs
 
+def grade_totals(date_from, date_to):
+    """
+    Total quantity (gross bag weight) and bag count purchased per cotton
+    quality (Type A/B/C) within a date range, based on the purchase's date.
+    Used on reports/dashboard to answer "how much of each grade did we buy".
+    """
+    qs = (
+        PurchaseBag.objects.filter(purchase__date__gte=date_from, purchase__date__lte=date_to)
+        .values("grade")
+        .annotate(total_weight_kg=Sum("weight_kg"), total_bags=Count("id"))
+    )
+    by_grade = {row["grade"]: row for row in qs}
+    grade_labels = dict(GRADE_CHOICES)
+    return [
+        {
+            "grade": code,
+            "label": grade_labels[code],
+            "total_weight_kg": by_grade.get(code, {}).get("total_weight_kg") or Decimal("0"),
+            "total_bags": by_grade.get(code, {}).get("total_bags") or 0,
+        }
+        for code in ("A", "B", "C")
+    ]
+
 
 def sale_totals(date_from, date_to):
     qs = Sale.objects.filter(date__gte=date_from, date__lte=date_to)
@@ -206,6 +264,7 @@ def profit_report(date_from, date_to):
         "total_sale_quantity": sale_agg["total_quantity"],
         "total_expenses": expense_total,
         "expense_by_category": expense_by_category,
+        "grade_totals": grade_totals(date_from, date_to),
         "profit": profit,
     }
 
