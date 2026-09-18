@@ -298,6 +298,29 @@ def expense_totals(date_from, date_to):
     return total, by_category, qs
 
 
+def purchase_report(date_from, date_to):
+    """Purchases-only report section (no sales data at all)."""
+    totals, qs = purchase_totals(date_from, date_to)
+    return {
+        "date_from": date_from,
+        "date_to": date_to,
+        **totals,
+        "grade_totals": grade_totals(date_from, date_to),
+        "purchases": qs.select_related("client").order_by("-date", "-created_at"),
+    }
+
+
+def sale_report(date_from, date_to):
+    """Sales-only report section (no purchase data at all)."""
+    totals, qs = sale_totals(date_from, date_to)
+    return {
+        "date_from": date_from,
+        "date_to": date_to,
+        **totals,
+        "sales": qs.select_related("buyer").order_by("-date", "-created_at"),
+    }
+
+
 def profit_report(date_from, date_to):
     """
     Requirement #7: Profit = Sales - Purchases (net payable) - Expenses.
@@ -320,7 +343,6 @@ def profit_report(date_from, date_to):
         "total_sale_quantity": sale_agg["total_quantity"],
         "total_expenses": expense_total,
         "expense_by_category": expense_by_category,
-        "grade_totals": grade_totals(date_from, date_to),
         "profit": profit,
     }
 

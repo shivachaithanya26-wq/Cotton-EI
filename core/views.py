@@ -198,15 +198,31 @@ def expense_create(request):
 # Reports (requirements #2, #3, #7)
 # ---------------------------------------------------------------------
 
+SECTION_REPORT_FUNCS = {
+    "purchases": services.purchase_report,
+    "sales": services.sale_report,
+    "profit_loss": services.profit_report,
+}
+
+
 @login_required
 def report_daily(request):
     day_str = request.GET.get("date")
     day = date.fromisoformat(day_str) if day_str else timezone.localdate()
-    report = services.profit_report(day, day)
+    section = request.GET.get("section", "purchases")
+    report = SECTION_REPORT_FUNCS.get(section, services.purchase_report)(day, day)
+    date_qs = f"date={day.isoformat()}"
     return render(
         request,
         "core/report.html",
-        {"report": report, "title": f"Daily report - {day}", "mode": "daily", "day": day},
+        {
+            "report": report,
+            "title": f"Daily report - {day}",
+            "mode": "daily",
+            "day": day,
+            "section": section,
+            "tab_urls": {name: f"?{date_qs}&section={name}" for name in SECTION_REPORT_FUNCS},
+        },
     )
 
 
@@ -214,9 +230,11 @@ def report_daily(request):
 def report_monthly(request):
     year = int(request.GET.get("year", timezone.localdate().year))
     month = int(request.GET.get("month", timezone.localdate().month))
+    section = request.GET.get("section", "purchases")
     first_day = date(year, month, 1)
     last_day = date(year, month, calendar.monthrange(year, month)[1])
-    report = services.profit_report(first_day, last_day)
+    report = SECTION_REPORT_FUNCS.get(section, services.purchase_report)(first_day, last_day)
+    date_qs = f"year={year}&month={month}"
     return render(
         request,
         "core/report.html",
@@ -226,6 +244,8 @@ def report_monthly(request):
             "mode": "monthly",
             "year": year,
             "month": month,
+            "section": section,
+            "tab_urls": {name: f"?{date_qs}&section={name}" for name in SECTION_REPORT_FUNCS},
         },
     )
 
@@ -233,13 +253,29 @@ def report_monthly(request):
 @login_required
 def report_custom(request):
     report = None
+    section = request.GET.get("section", "purchases")
     if request.method == "GET" and request.GET.get("date_from"):
         form = DateRangeForm(request.GET)
         if form.is_valid():
-            report = services.profit_report(form.cleaned_data["date_from"], form.cleaned_data["date_to"])
+            date_from = form.cleaned_data["date_from"]
+            date_to = form.cleaned_data["date_to"]
+            report = SECTION_REPORT_FUNCS.get(section, services.purchase_report)(date_from, date_to)
+            date_qs = f"date_from={date_from.isoformat()}&date_to={date_to.isoformat()}"
+        else:
+            date_qs = ""
     else:
         form = DateRangeForm()
-    return render(request, "core/report_custom.html", {"form": form, "report": report})
+        date_qs = ""
+    return render(
+        request,
+        "core/report_custom.html",
+        {
+            "form": form,
+            "report": report,
+            "section": section,
+            "tab_urls": {name: f"?{date_qs}&section={name}" for name in SECTION_REPORT_FUNCS} if date_qs else {},
+        },
+    )
 
 
 # ---------------------------------------------------------------------
