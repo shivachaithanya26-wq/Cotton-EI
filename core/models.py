@@ -15,6 +15,11 @@ GRADE_CHOICES = [
     ("C", "Type C - Poor"),
 ]
 
+BAG_SIZE_CHOICES = [
+    ("BIG", "Big"),
+    ("SMALL", "Small"),
+]
+
 
 class Client(models.Model):
     """A farmer / seller we buy cotton from."""
@@ -103,9 +108,10 @@ class CashCuttingRule(models.Model):
 
 
 class TareRule(models.Model):
-    """Per-bag weight deduction (packing/moisture allowance)."""
+    """Per-bag weight deduction (packing/moisture allowance), per bag size."""
 
     name = models.CharField(max_length=100, default="Default Bag Tare")
+    bag_size = models.CharField(max_length=5, choices=BAG_SIZE_CHOICES, default="BIG")
     weight_per_bag_kg = models.DecimalField(
         max_digits=6,
         decimal_places=3,
@@ -118,11 +124,11 @@ class TareRule(models.Model):
         ordering = ["-id"]
 
     def __str__(self):
-        return f"{self.name} ({self.weight_per_bag_kg} kg/bag)"
+        return f"{self.name} - {self.get_bag_size_display()} ({self.weight_per_bag_kg} kg/bag)"
 
     @classmethod
-    def active_default(cls):
-        return cls.objects.filter(is_active=True).order_by("-id").first()
+    def active_default(cls, bag_size="BIG"):
+        return cls.objects.filter(is_active=True, bag_size=bag_size).order_by("-id").first()
 
 
 class Purchase(models.Model):
@@ -164,8 +170,25 @@ class Purchase(models.Model):
     cash_cutting_rule = models.ForeignKey(CashCuttingRule, on_delete=models.PROTECT, null=True, blank=True, help_text="Leave blank if entering a custom rate below.") 
     tare_rule = models.ForeignKey(TareRule, on_delete=models.PROTECT, null=True, blank=True, help_text="Leave blank if entering a custom tare below.") 
     custom_cash_cutting_rate_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Custom cash-cutting % for this purchase only.") 
-    custom_tare_per_bag_kg = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True, help_text="Custom tare (kg per bag) for this purchase only.")
+    custom_tare_per_bag_kg = models.DecimalField(
+        max_digits=6, decimal_places=3, null=True, blank=True,
+        help_text="Deprecated — superseded by custom_tare_big_kg / custom_tare_small_kg below. Kept for backward compatibility, no longer used in calculations.",
+    )
 
+    # ---- per-bag-size tare overrides (Big vs Small bags) ----
+    # Each bag now carries its own size (see PurchaseBag.bag_size). Big and
+    # Small bags have different physical tare (default 1.0 kg and 0.5 kg
+    # respectively, configurable via TareRule per size). These two fields
+    # let a purchase override either size's tare for itself only.
+    custom_tare_big_kg = models.DecimalField(
+        max_digits=6, decimal_places=3, null=True, blank=True,
+        help_text="Custom tare (kg) for Big bags in this purchase only. Leave blank to use the default (1.0 kg unless a TareRule says otherwise).",
+    )
+    custom_tare_small_kg = models.DecimalField(
+        max_digits=6, decimal_places=3, null=True, blank=True,
+        help_text="Custom tare (kg) for Small bags in this purchase only. Leave blank to use the default (0.5 kg unless a TareRule says otherwise).",
+    )
+    
     # ---- computed / derived fields (set by services.calculate_purchase) ----
     gross_weight_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0, editable=False)
     num_bags = models.PositiveIntegerField(default=0, editable=False)
@@ -217,13 +240,14 @@ class PurchaseBag(models.Model):
     bag_number = models.PositiveIntegerField()
     weight_kg = models.DecimalField(max_digits=8, decimal_places=3)
     grade = models.CharField(max_length=1, choices=GRADE_CHOICES, default="A")
+    bag_size = models.CharField(max_length=5, choices=BAG_SIZE_CHOICES, default="BIG")
 
     class Meta:
         ordering = ["bag_number"]
         unique_together = ("purchase", "bag_number")
 
     def __str__(self):
-        return f"Bag {self.bag_number} - {self.weight_kg} kg ({self.get_grade_display()})"
+        return f"Bag {self.bag_number} - {self.weight_kg} kg ({self.get_grade_display()}, {self.get_bag_size_display()})"
 
 
 class Sale(models.Model):

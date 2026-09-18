@@ -41,9 +41,9 @@ class PurchaseForm(forms.ModelForm):
             "live_price",
             "manual_price_per_quintal",
             "cash_cutting_rule",
-            "tare_rule",
             "custom_cash_cutting_rate_percent",
-            "custom_tare_per_bag_kg",
+            "custom_tare_big_kg",
+            "custom_tare_small_kg",
             "price_type_b_per_quintal",
             "price_type_c_per_quintal",
             "notes",
@@ -55,12 +55,14 @@ class PurchaseForm(forms.ModelForm):
             "live_price": forms.Select(attrs={"class": "form-select"}),
             "manual_price_per_quintal": forms.NumberInput(attrs={"step": "0.01", "class": "form-control"}),
             "cash_cutting_rule": forms.Select(attrs={"class": "form-select"}),
-            "tare_rule": forms.Select(attrs={"class": "form-select"}),
             "custom_cash_cutting_rate_percent": forms.NumberInput(
                 attrs={"step": "0.01", "class": "form-control", "placeholder": "e.g. 5.00"}
             ),
-            "custom_tare_per_bag_kg": forms.NumberInput(
-                attrs={"step": "0.001", "class": "form-control", "placeholder": "e.g. 0.500"}
+            "custom_tare_big_kg": forms.NumberInput(
+                attrs={"step": "0.001", "class": "form-control", "placeholder": "default 1.000"}
+            ),
+            "custom_tare_small_kg": forms.NumberInput(
+                attrs={"step": "0.001", "class": "form-control", "placeholder": "default 0.500"}
             ),
             "price_type_b_per_quintal": forms.NumberInput(
                 attrs={"step": "0.01", "class": "form-control", "placeholder": "Rs./quintal"}
@@ -70,10 +72,10 @@ class PurchaseForm(forms.ModelForm):
             ),
             "notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
         }
-
+        
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["client"].required = False
+                super().__init__(*args, **kwargs)
+                self.fields["client"].required = False
 
     def clean(self):
         cleaned_data = super().clean()
@@ -92,11 +94,12 @@ class PurchaseForm(forms.ModelForm):
 class PurchaseBagForm(forms.ModelForm):
     class Meta:
         model = PurchaseBag
-        fields = ["bag_number", "weight_kg", "grade"]
+        fields = ["bag_number", "weight_kg", "grade", "bag_size"]
         widgets = {
             "bag_number": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001", "min": 0}),
             "grade": forms.Select(attrs={"class": "form-select"}),
+            "bag_size": forms.Select(attrs={"class": "form-select"}),
         }
 
 

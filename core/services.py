@@ -17,38 +17,53 @@ def to_quintal(weight_kg: Decimal) -> Decimal:
     return weight_kg / Decimal("100")
 
 
+def _resolve_tare_by_size(purchase: Purchase) -> dict:
+    """
+    Big and Small bags have different tare. For each size: a custom
+    per-purchase override wins first, then the active TareRule for that
+    size, then a hardcoded fallback (1.0 kg Big / 0.5 kg Small).
+    """
+    tare_by_size = {}
+    size_defaults = {"BIG": Decimal("1.0"), "SMALL": Decimal("0.5")}
+    custom_by_size = {"BIG": purchase.custom_tare_big_kg, "SMALL": purchase.custom_tare_small_kg}
+    for size in ("BIG", "SMALL"):
+        custom_value = custom_by_size[size]
+        if custom_value is not None:
+            tare_by_size[size] = Decimal(str(custom_value))
+            continue
+        rule = TareRule.active_default(bag_size=size)
+        tare_by_size[size] = Decimal(str(rule.weight_per_bag_kg)) if rule else size_defaults[size]
+    return tare_by_size
+
+
 def calculate_purchase(purchase: Purchase) -> Purchase:
     """
     Implements requirement #9, extended for multiple cotton qualities in
-    one purchase (Type A / B / C):
+    one purchase (Type A / B / C) AND two bag sizes (Big / Small), each
+    with its own tare:
 
-      1. Group the individually-weighed bags by grade.
-      2. Within each grade, sum weight -> gross weight, bag count.
-      3. Subtract the SAME per-bag tare from every bag regardless of grade
-         (tare is a physical bag-weight allowance, not quality-dependent)
+      1. Resolve the tare for Big bags and Small bags separately (custom
+         override -> active TareRule for that size -> hardcoded default).
+      2. Group the individually-weighed bags by grade.
+      3. Within each grade, deduct each bag's OWN size-specific tare
+         (bags of the same grade can still be a mix of Big and Small)
          -> net weight per grade.
       4. Convert each grade's net weight into the purchase's chosen unit
          and multiply by THAT grade's price -> gross amount per grade.
       5. Sum all grades' gross amounts -> total gross amount.
-      6. Deduct ONE cash-cutting percentage from the total (also not
+      6. Deduct ONE cash-cutting percentage from the total (not
          quality-dependent) -> net amount payable to the client.
 
     Worked example matching the spec: 3 quintal x Rs.7000 = Rs.21,000.
     5% cash cutting = Rs.1,050. Net payable = Rs.19,950.
-    (That example only used Type A bags, so it still matches exactly.)
+    (That example only used Type A, Big bags, so it still matches exactly.)
     """
     bags = list(purchase.bags.all())
     gross_weight_kg = sum((Decimal(str(b.weight_kg)) for b in bags), Decimal("0"))
     num_bags = len(bags)
 
-    tare_rule = purchase.tare_rule or TareRule.active_default()
-    if purchase.custom_tare_per_bag_kg is not None:
-        tare_per_bag = Decimal(str(purchase.custom_tare_per_bag_kg))
-    elif tare_rule:
-        tare_per_bag = Decimal(str(tare_rule.weight_per_bag_kg))
-    else:
-        tare_per_bag = Decimal("0.5")
-    tare_weight_kg = tare_per_bag * num_bags
+    tare_by_size = _resolve_tare_by_size(purchase)
+    tare_weight_kg = sum((tare_by_size[b.bag_size] for b in bags), Decimal("0"))
 
     net_weight_kg = gross_weight_kg - tare_weight_kg
     if net_weight_kg < 0:
@@ -75,7 +90,7 @@ def calculate_purchase(purchase: Purchase) -> Purchase:
         if not grade_bags:
             continue
         grade_gross_weight_kg = sum((Decimal(str(b.weight_kg)) for b in grade_bags), Decimal("0"))
-        grade_tare_kg = tare_per_bag * len(grade_bags)
+        grade_tare_kg = sum((tare_by_size[b.bag_size] for b in grade_bags), Decimal("0"))
         grade_net_weight_kg = grade_gross_weight_kg - grade_tare_kg
         if grade_net_weight_kg < 0:
             grade_net_weight_kg = Decimal("0")
@@ -121,8 +136,6 @@ def calculate_purchase(purchase: Purchase) -> Purchase:
     purchase.gross_amount_type_c = gross_amount_by_grade["C"]
     if purchase.cash_cutting_rule_id is None:
         purchase.cash_cutting_rule = cutting_rule
-    if purchase.tare_rule_id is None:
-        purchase.tare_rule = tare_rule
     return purchase
 
 
