@@ -19,6 +19,14 @@
   <a href="{% url 'core:investment_add' %}" class="small">Add investment →</a>
 </div>
 
+<div class="card p-3 mb-4 card-metric">
+  <small class="text-muted">Cotton stock remaining (all quality types combined)</small>
+  <h3 class="{% if stock.remaining_kg >= 0 %}text-success{% else %}text-danger{% endif %}">
+    {{ stock.remaining_kg }} kg
+  </h3>
+  <small class="text-muted">{{ stock.total_purchased_kg }} kg purchased all-time − {{ stock.total_sold_kg }} kg sold all-time</small>
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-md-3">
     <div class="card card-metric p-3">
@@ -35,12 +43,14 @@
     <div class="card card-metric p-3">
       <small class="text-muted">Today's Purchases ({{ today_purchase_count }})</small>
       <h4>Rs.{{ today_purchase_total }}</h4>
+      <small class="text-muted">{{ today_purchase_qty_kg }} kg purchased</small>
     </div>
   </div>
   <div class="col-md-3">
     <div class="card card-metric p-3">
       <small class="text-muted">Today's Sales ({{ today_sale_count }})</small>
       <h4>Rs.{{ today_sale_total }}</h4>
+      <small class="text-muted">{{ today_sale_qty }} sold</small>
     </div>
   </div>
   <div class="col-md-3">
@@ -51,14 +61,18 @@
   </div>
 </div>
 
-<div class="card p-3">
-  <h5>Month to date ({{ month_report.date_from }} → {{ month_report.date_to }})</h5>
+<div class="card p-3 mb-4">
+  <h5>Total purchases and sales (all-time)</h5>
   <div class="row text-center">
-    <div class="col"><small class="text-muted">Purchases (net payable)</small><h5>Rs.{{ month_report.total_purchase_cost }}</h5></div>
-    <div class="col"><small class="text-muted">Sales</small><h5>Rs.{{ month_report.total_sales }}</h5></div>
-    <div class="col"><small class="text-muted">Expenses</small><h5>Rs.{{ month_report.total_expenses }}</h5></div>
-    <div class="col"><small class="text-muted">Profit</small>
-      <h5 class="{% if month_report.profit >= 0 %}text-success{% else %}text-danger{% endif %}">Rs.{{ month_report.profit }}</h5>
+    <div class="col">
+      <small class="text-muted">Total Purchases (net payable)</small>
+      <h5>Rs.{{ overall.total_purchase_amount }}</h5>
+      <small class="text-muted">{{ overall.total_purchase_qty_kg }} kg</small>
+    </div>
+    <div class="col">
+      <small class="text-muted">Total Sales</small>
+      <h5>Rs.{{ overall.total_sale_amount }}</h5>
+      <small class="text-muted">{{ overall.total_sale_qty_kg }} kg</small>
     </div>
   </div>
 </div>

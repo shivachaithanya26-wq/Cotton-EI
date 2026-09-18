@@ -31,18 +31,21 @@ def dashboard(request):
     today_expenses, _, _ = services.expense_totals(today, today)
     today_price = LivePrice.latest_for(today)
 
-    month_start = today.replace(day=1)
-    month_report = services.profit_report(month_start, today)
+    stock = services.stock_summary()
+    overall = services.overall_totals()
 
     context = {
         "today": today,
         "today_price": today_price,
         "today_purchase_total": today_purchases["total_net_payable"],
         "today_purchase_count": purchase_qs.count(),
+        "today_purchase_qty_kg": today_purchases["total_net_weight_kg"],
         "today_sale_total": today_sales["total_amount"],
         "today_sale_count": sale_qs.count(),
+        "today_sale_qty": today_sales["total_quantity"],
         "today_expense_total": today_expenses,
-        "month_report": month_report,
+        "stock": stock,
+        "overall": overall,
         "investment_balance": services.investment_balance(),
     }
     return render(request, "core/dashboard.html", context)

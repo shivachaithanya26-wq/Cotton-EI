@@ -10,6 +10,7 @@ from django.utils import timezone
 from .models import CashCuttingRule, Expense, LivePrice, Purchase, Sale, TareRule, Investment, GRADE_CHOICES, PurchaseBag
 
 TWO_PLACES = Decimal("0.01")
+THREE_PLACES = Decimal('0.001')
 
 
 def to_quintal(weight_kg: Decimal) -> Decimal:
@@ -203,7 +204,58 @@ def purchase_totals(date_from, date_to):
         total_net_weight_kg=Sum("net_weight_kg"),
         total_bags=Sum("num_bags"),
     )
-    return {k: (v or Decimal("0")) for k, v in agg.items()}, qs
+    # Sum() over a DecimalField can come back with SQLite-driven trailing
+    # noise digits (e.g. "54363.7400000000") -- quantize everything to the
+    # field's real precision so totals always display cleanly.
+    money_keys = {"total_gross", "total_cash_cutting", "total_net_payable"}
+    result = {}
+    for k, v in agg.items():
+        v = v or Decimal("0")
+        result[k] = v.quantize(TWO_PLACES) if k in money_keys else (
+            v.quantize(THREE_PLACES) if k == "total_net_weight_kg" else v
+        )
+    return result, qs
+
+def stock_summary():
+    """
+    Running stock ledger: total kg ever purchased (net weight, after tare,
+    across every quality) minus total kg ever sold. Sales can be recorded
+    in either KG or QTL, so each sale's quantity is normalized to kg before
+    subtracting, otherwise mixed units would silently misreport stock.
+    This is a running total (never reset per day), same idea as
+    investment_balance() -- whatever's left on hand simply carries forward.
+    """
+    total_purchased_kg = Purchase.objects.aggregate(t=Sum("net_weight_kg"))["t"] or Decimal("0")
+
+    total_sold_kg = Decimal("0")
+    for row in Sale.objects.values("unit").annotate(total=Sum("quantity")):
+        qty_sum = row["total"] or Decimal("0")
+        total_sold_kg += qty_sum * Decimal("100") if row["unit"] == "QTL" else qty_sum
+
+    remaining_kg = total_purchased_kg - total_sold_kg
+    return {
+        "total_purchased_kg": total_purchased_kg.quantize(THREE_PLACES),
+        "total_sold_kg": total_sold_kg.quantize(THREE_PLACES),
+        "remaining_kg": remaining_kg.quantize(THREE_PLACES),
+    }
+
+def overall_totals():
+    """
+    All-time totals (no date filter), for the dashboard's "Total purchases
+    and sales" card -- separate from stock_summary()'s kg-only ledger and
+    separate from "Today"'s date-scoped figures.
+    """
+    stock = stock_summary()
+    total_purchase_amount = (Purchase.objects.aggregate(t=Sum("net_payable"))["t"] or Decimal("0")).quantize(
+        TWO_PLACES
+    )
+    total_sale_amount = (Sale.objects.aggregate(t=Sum("amount"))["t"] or Decimal("0")).quantize(TWO_PLACES)
+    return {
+        "total_purchase_amount": total_purchase_amount,
+        "total_purchase_qty_kg": stock["total_purchased_kg"],
+        "total_sale_amount": total_sale_amount,
+        "total_sale_qty_kg": stock["total_sold_kg"],
+    }
 
 def grade_totals(date_from, date_to):
     """
@@ -222,7 +274,9 @@ def grade_totals(date_from, date_to):
         {
             "grade": code,
             "label": grade_labels[code],
-            "total_weight_kg": by_grade.get(code, {}).get("total_weight_kg") or Decimal("0"),
+            "total_weight_kg": (by_grade.get(code, {}).get("total_weight_kg") or Decimal("0")).quantize(
+                THREE_PLACES
+            ),
             "total_bags": by_grade.get(code, {}).get("total_bags") or 0,
         }
         for code in ("A", "B", "C")
@@ -232,12 +286,14 @@ def grade_totals(date_from, date_to):
 def sale_totals(date_from, date_to):
     qs = Sale.objects.filter(date__gte=date_from, date__lte=date_to)
     agg = qs.aggregate(total_amount=Sum("amount"), total_quantity=Sum("quantity"))
-    return {k: (v or Decimal("0")) for k, v in agg.items()}, qs
+    total_amount = (agg["total_amount"] or Decimal("0")).quantize(TWO_PLACES)
+    total_quantity = (agg["total_quantity"] or Decimal("0")).quantize(THREE_PLACES)
+    return {"total_amount": total_amount, "total_quantity": total_quantity}, qs
 
 
 def expense_totals(date_from, date_to):
     qs = Expense.objects.filter(date__gte=date_from, date__lte=date_to)
-    total = qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    total = (qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")).quantize(TWO_PLACES)
     by_category = qs.values("category").annotate(total=Sum("amount")).order_by("category")
     return total, by_category, qs
 
@@ -278,4 +334,4 @@ def investment_balance():
     total_purchases = Purchase.objects.aggregate(total=Sum('net_payable'))['total'] or Decimal('0.00') 
     total_expenses = Expense.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0.00') 
 
-    return total_invested - total_purchases - total_expenses
+    return (total_invested - total_purchases - total_expenses).quantize(TWO_PLACES)
