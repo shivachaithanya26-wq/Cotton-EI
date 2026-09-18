@@ -27,14 +27,9 @@
         <label class="form-label">OR Manual price / quintal</label>
         {{ form.manual_price_per_quintal }}
       </div>
-      <div class="col-md-4">
+            <div class="col-md-4">
         <label class="form-label">Cash-cutting rule</label>
         {{ form.cash_cutting_rule }}
-        <div class="form-text">Leave blank to use the active default rule.</div>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Tare (per-bag deduction) rule</label>
-        {{ form.tare_rule }}
         <div class="form-text">Leave blank to use the active default rule.</div>
       </div>
       <div class="col-md-4">
@@ -42,10 +37,15 @@
         {{ form.custom_cash_cutting_rate_percent }}
         <div class="form-text">Overrides the rule above for this purchase only.</div>
       </div>
-            <div class="col-md-4">
-        <label class="form-label">OR custom tare (kg/bag)</label>
-        {{ form.custom_tare_per_bag_kg }}
-        <div class="form-text">Overrides the rule above for this purchase only.</div>
+      <div class="col-md-4">
+        <label class="form-label">Custom tare — Big bags (kg)</label>
+        {{ form.custom_tare_big_kg }}
+        <div class="form-text">Leave blank to use the default (1.000 kg unless a Tare Rule says otherwise).</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Custom tare — Small bags (kg)</label>
+        {{ form.custom_tare_small_kg }}
+        <div class="form-text">Leave blank to use the default (0.500 kg unless a Tare Rule says otherwise).</div>
       </div>
       <div class="col-md-4">
         <label class="form-label">Type B price / quintal</label>
@@ -86,13 +86,14 @@
     <h5>Bags — enter weight one bag at a time</h5>
     {{ formset.management_form }}
     <table class="table" id="bag-table">
-      <thead><tr><th>Bag #</th><th>Weight (kg)</th><th>Quality</th><th></th></tr></thead>
+      <thead><tr><th>Bag #</th><th>Weight (kg)</th><th>Quality</th><th>Size</th><th></th></tr></thead>
       <tbody>
       {% for bag_form in formset %}
         <tr>
           <td>{{ bag_form.bag_number }}</td>
           <td>{{ bag_form.weight_kg }}</td>
           <td>{{ bag_form.grade }}</td>
+          <td>{{ bag_form.bag_size }}</td>
           <td>{% if bag_form.DELETE %}{{ bag_form.DELETE }} Remove{% endif %}
               {{ bag_form.id }}{{ bag_form.errors }}</td>
         </tr>

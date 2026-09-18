@@ -8,10 +8,10 @@
     <div class="card p-3 mb-3">
       <h5>Bags</h5>
       <table class="table table-sm">
-        <thead><tr><th>Bag #</th><th>Weight (kg)</th><th>Quality</th></tr></thead>
+        <thead><tr><th>Bag #</th><th>Weight (kg)</th><th>Quality</th><th>Size</th></tr></thead>
         <tbody>
         {% for bag in purchase.bags.all %}
-          <tr><td>{{ bag.bag_number }}</td><td>{{ bag.weight_kg }}</td><td>{{ bag.get_grade_display }}</td></tr>
+          <tr><td>{{ bag.bag_number }}</td><td>{{ bag.weight_kg }}</td><td>{{ bag.get_grade_display }}</td><td>{{ bag.get_bag_size_display }}</td></tr>
         {% endfor %}
         </tbody>
       </table>

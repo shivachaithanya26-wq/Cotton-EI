@@ -39,7 +39,8 @@ class CashCuttingRuleAdmin(admin.ModelAdmin):
 
 @admin.register(TareRule)
 class TareRuleAdmin(admin.ModelAdmin):
-    list_display = ("name", "weight_per_bag_kg", "is_active")
+    list_display = ("name", "bag_size", "weight_per_bag_kg", "is_active")
+    list_filter = ("bag_size", "is_active")
 
 
 class PurchaseBagInline(admin.TabularInline):
